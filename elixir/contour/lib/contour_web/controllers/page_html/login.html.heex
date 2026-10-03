@@ -1,0 +1,23 @@
+<main class="mx-auto flex min-h-screen max-w-4xl flex-col justify-center px-6 py-16">
+  <p class="text-xs tracking-[0.3em] text-lime-300">CONTOUR / MASKIROVKA</p>
+  <h1 class="mt-6 max-w-xl text-5xl font-semibold tracking-tight sm:text-7xl">
+    Read the terrain.<br />Keep them guessing.
+  </h1>
+  <p class="mt-6 max-w-lg text-lg text-stone-400">
+    Sector control. Reconnaissance. Deception. Your command begins here.
+  </p>
+  <p :if={Phoenix.Flash.get(@conn.assigns.flash, :error)} role="alert" class="mt-6 text-red-300">
+    {Phoenix.Flash.get(@conn.assigns.flash, :error)}
+  </p>
+  <.link
+    :if={@oidc_enabled}
+    href={~p"/auth/google"}
+    class="mt-10 w-fit rounded border border-lime-300 bg-lime-300 px-6 py-3 font-medium text-stone-950 hover:bg-lime-200 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lime-300"
+  >Continue with Google</.link>
+  <p :if={!@oidc_enabled} class="mt-10 text-sm text-stone-400">
+    Google login is being configured.
+  </p>
+  <p class="mt-12 border-t border-stone-800 pt-6 text-xs tracking-widest text-stone-500">
+    ALPHA · COMMAND STATION
+  </p>
+</main>

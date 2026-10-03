@@ -2,10 +2,19 @@
 
 **Game:** CONTOUR: Maskirovka
 
+## 0. Approved foundation phase
+
+- [x] 0.1 Establish pragmatic Elixir/web/Kubernetes directory boundaries, strict TypeScript with pinned ESNext tools, Tailwind v4, and an integration-first testing policy in AGENTS.md.
+- [x] 0.2 Implement project-owned Ash identity/security resources, AshPostgres migrations, and AshOban maintenance; verify isolated real PostgreSQL integration workflows.
+- [x] 0.3 Implement Google OIDC state/nonce/PKCE and session-bound Guardian API authentication with shared database rate limits; verify policy isolation, malformed JWT rejection, revocation, single-use challenges, CSRF, and quota concurrency through integration tests. Live Google-client acceptance remains a deployment check.
+- [x] 0.4 Provide a persistent stock CNPG PostgreSQL container using Apple's container system and native Mix/Phoenix development; verify startup, migrations, database outage responses, and recovery.
+- [x] 0.5 Configure pinned Bazel/BuildBuddy RBE release and frontend builds, isolated PostgreSQL/HTTP and mutual-TLS multi-node tests, and ignored private credentials; verify remote execution and runtime image packaging.
+- [x] 0.6 Add Kustomize staging/prod foundations with three web/three core replicas, stock CNPG, migration hook, TLS distribution, secret references, security policies, and manual farm01 ArgoCD configuration; verify rendered manifests and document rollout prerequisites. Live deployment/promotion remains outside this phase.
+
 ## 1. Application and shared native bootstrap
 
-- [ ] 1.1 Generate the `Contour`/`ContourWeb` Phoenix application and asset setup with compatible toolchains; verify local startup serves an authenticated-shell placeholder and record reproducible setup commands in README.
-- [ ] 1.2 Pin the ServiceRadar-resolved Phoenix 1.8.15, LiveView 1.2.12, Bandit 1.12.5, Ecto SQL 3.14.0, Postgrex 0.22.4, Rustler 0.38.0, Horde 0.10.0, and libcluster 3.5.0 baselines with compatible JS assets; verify clean dependency resolution and independent project lockfiles.
+- [x] 1.1 Generate the `Contour`/`ContourWeb` Phoenix application and asset setup with compatible toolchains; verify local startup serves an authenticated-shell placeholder and record reproducible setup commands in README.
+- [x] 1.2 Pin the ServiceRadar-resolved Phoenix 1.8.15, LiveView 1.2.12, Bandit 1.12.5, Ecto SQL 3.14.0, Postgrex 0.22.4, Rustler 0.38.0, Horde 0.10.0, and libcluster 3.5.0 baselines with compatible JS assets; verify clean dependency resolution and independent project lockfiles.
 - [ ] 1.3 Create pure simulation/protocol crates plus thin native and WASM targets using Arrow array/IPC/schema 59.2.0, Roaring 0.11.4, and petgraph 0.8.3; verify native compilation and `wasm32-unknown-unknown` compilation with only required features enabled.
 - [ ] 1.4 Adapt ServiceRadar's checked native-binary boundary and WASM instantiation/allocation lifecycle into a synthetic round-trip spike; verify an Arrow batch and portable bitmap survive native -> BEAM -> browser worker -> WASM decoding with no sibling-checkout runtime dependency.
 - [ ] 1.5 Add local developer checks for Elixir formatting/compilation, Rust formatting/clippy, JS build, and target compilation; verify the documented check commands run on a fresh checkout and record ServiceRadar provenance/retained notices for adapted source.
@@ -93,7 +102,7 @@
 
 ## 10. Cluster ownership, admission, and supervision
 
-- [ ] 10.1 Implement local registry/supervision and optional Horde/libcluster cluster configuration adapted from ServiceRadar; verify named local nodes discover sessions and Kubernetes DNS strategy settings are environment-driven with explicit membership/sync bounds.
+- [x] 10.1 Implement local registry/supervision and optional Horde/libcluster cluster configuration adapted from ServiceRadar; verify named local nodes discover sessions and Kubernetes DNS strategy settings are environment-driven with explicit membership/sync bounds.
 - [ ] 10.2 Implement atomic PostgreSQL lifecycle ownership/epoch acquisition, token-checked renewal, conservative monotonic deadlines, and independent supervised lease renewal; verify competing starters cannot both become running owners.
 - [ ] 10.3 Implement session and gateway lease/epoch gates with bounded cached authorization; verify delayed renewal responses, stale epochs, database loss, and partitioned contenders cannot publish accepted unfenced ticks or commit results.
 - [ ] 10.4 Implement expired-lease reconciliation and owner-resource-loss interruption without seed reconstruction; verify owner process/pod loss terminates the affected match and unrelated healthy rooms continue.

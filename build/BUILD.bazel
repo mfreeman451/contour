@@ -1,0 +1,30 @@
+load("@rules_elixir//:mix_payloads.bzl", "mix_payloads")
+package(default_visibility = ["//visibility:public"])
+exports_files(["hex_compile_env.bzl"])
+config_setting(name = "darwin", constraint_values = ["@platforms//os:macos"])
+mix_payloads(
+    name = "payloads",
+    archives = ["@hex//:archive"],
+    elixir_make_nifs = select({":darwin": ["@lazy_html_darwin//file"], "//conditions:default": ["@lazy_html_linux//file"]}),
+)
+toolchain(name = "mix_payloads", toolchain = ":payloads", toolchain_type = "@rules_elixir//:mix_payloads_toolchain_type")
+
+# BuildBuddy's digest-pinned action image supplies GCC/make/bison/flex.
+# The source and image both participate in the action's cache key.
+genrule(
+    name = "postgres", srcs = ["@postgresql_src//:srcs", "@postgresql_src//:configure"], outs = ["postgres.tar.gz"],
+    target_compatible_with = ["@platforms//os:linux"],
+    cmd = """
+      set -eu
+      task_root=$$PWD
+      source_dir=$$(dirname "$(location @postgresql_src//:configure)")
+      mkdir -p build/postgres-work/src build/postgres-work/stage
+      cp -R "$$source_dir/." build/postgres-work/src/
+      cd build/postgres-work/src
+      ./configure --prefix=/opt/contour-postgres --without-readline --without-zlib --without-icu >configure.log 2>&1 || { cat configure.log; exit 1; }
+      make -j4 >make.log 2>&1 || { tail -100 make.log; exit 1; }
+      make install DESTDIR="$$task_root/build/postgres-work/stage" >install.log 2>&1 || { cat install.log; exit 1; }
+      cd "$$task_root"
+      tar --sort=name --mtime=@0 --owner=0 --group=0 -czf "$@" -C build/postgres-work/stage/opt/contour-postgres .
+    """,
+)

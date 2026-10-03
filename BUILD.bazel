@@ -1,0 +1,2 @@
+alias(name = "backend", actual = "//elixir/contour:app")
+alias(name = "release", actual = "//elixir/contour:release")

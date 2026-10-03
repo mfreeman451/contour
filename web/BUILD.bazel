@@ -1,0 +1,21 @@
+load(":build.bzl", "web_build")
+load("@rules_elixir//:phoenix_digest.bzl", "phoenix_digest")
+package(default_visibility = ["//visibility:public"])
+config_setting(name = "darwin", constraint_values = ["@platforms//os:macos"])
+
+NPM = {
+    "@npm_typescript//:files": "typescript",
+    "@npm_phoenix//:files": "phoenix",
+    "@npm_phoenix_html//:files": "phoenix_html",
+    "@npm_phoenix_live_view//:files": "phoenix_live_view",
+    "@npm_types_phoenix//:files": "@types/phoenix",
+    "@npm_types_phoenix_live_view//:files": "@types/phoenix_live_view",
+}
+NPM_TYPES = select({":darwin": NPM | {"@npm_typescript_darwin//:files": "@typescript/typescript-darwin-arm64"}, "//conditions:default": NPM | {"@npm_typescript_linux//:files": "@typescript/typescript-linux-x64"}})
+NPM_BUNDLE = select({":darwin": NPM | {"@npm_esbuild_darwin//:files": "@esbuild/platform", "@npm_typescript_darwin//:files": "@typescript/typescript-darwin-arm64"}, "//conditions:default": NPM | {"@npm_esbuild_linux//:files": "@esbuild/platform", "@npm_typescript_linux//:files": "@typescript/typescript-linux-x64"}})
+SOURCES = glob(["src/**/*.ts", "styles/**"]) + ["tsconfig.json", "package.json", "package-lock.json"]
+NODE = select({":darwin": "@node_darwin//:bin/node", "//conditions:default": "@node_linux//:bin/node"})
+TAILWIND = select({":darwin": "@tailwind_darwin//file", "//conditions:default": "@tailwind_linux//file"})
+web_build(name = "typecheck", srcs = SOURCES, operation = "typecheck", npm_packages = NPM_TYPES, node = NODE, tailwind = TAILWIND, out = "types.ok")
+web_build(name = "bundle", srcs = SOURCES + ["//elixir/contour:templates", ":typecheck"], operation = "bundle", npm_packages = NPM_BUNDLE, node = NODE, tailwind = TAILWIND)
+phoenix_digest(name = "static", src = ":bundle", deps = ["@hexpm//:phoenix"], out = "web-static-digested.tar.gz")

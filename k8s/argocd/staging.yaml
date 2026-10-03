@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: contour-staging
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/mfreeman451/rts-game.git
+    targetRevision: staging
+    path: k8s/overlays/staging
+  destination:
+    name: farm01
+    namespace: contour-staging
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    # Enable auto-sync after cluster prerequisite and secret bootstrap checks.

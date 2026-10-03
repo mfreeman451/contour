@@ -1,0 +1,11 @@
+load("@rules_elixir//:hex_stubs.bzl", "hex_stubs", "hex_stubs_test", "hex_stubs_write")
+exports_files(glob(["*.BUILD"]))
+hex_stubs(
+    name = "stubs",
+    locks = ["//elixir/contour:mix.lock"],
+    drop_edges = {"phoenix_live_view": ["lazy_html"]},
+    extra_mix_loads = {"@contour//build:hex_compile_env.bzl": ["HEX_COMPILE_ENV_CONFIG"]},
+    extra_mix_attrs = ["extra_config = HEX_COMPILE_ENV_CONFIG,"],
+)
+hex_stubs_test(name = "lock_consistency", stubs = ":stubs", checked_in = ["hex_packages.bzl"] + glob(["*.BUILD"]), write_target = "//third_party/hex:write")
+hex_stubs_write(name = "write", stubs = ":stubs", dest_package = "third_party/hex", tags = ["manual"])

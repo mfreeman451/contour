@@ -8,6 +8,16 @@ See [proposal.md](proposal.md) for motivation and scope. This repository has `RE
 
 The user identified `/Users/mfreeman/src/serviceradar` as the implementation reference. Read-only inspection used clean commit `816f08685f7bf02cb8f192ad9fffd9aaf182d3ca`. Its implementation confirms working building blocks, not the game's performance envelope. No captured deployment data or production fixtures will be imported.
 
+### Approved foundation refinements
+
+The user approved implementation with Elixir 1.20.4 / OTP 29.1.1, Ash resources/domains and AshPostgres, AshOban, Guardian with Google OIDC, Tailwind v4, and strict TypeScript for all first-party browser code. TypeScript/esbuild target ESNext with pinned tools. Organize the application in `elixir/contour/`, browser source in `web/`, and Kustomize manifests in `k8s/`; future Rust work stays in `native/`.
+
+Separate three web and three core replicas. Registry visibility spans both roles, but only core nodes participate in Horde placement. Discovery uses environment-driven libcluster DNS polling against a shared headless service, named releases, bounded CRDT settings, a shared secret cookie, and mutual TLS distribution. Horde relocation is infrastructure behavior; the later match ownership/lease work must prevent recreating lost native state.
+
+Daily development runs native BEAM/Phoenix against the stock CNPG PostgreSQL 18.6 image in Apple's container system. Bazel/BuildBuddy RBE build the Linux amd64 release and run isolated PostgreSQL/HTTP and TLS multi-node integration tests. The user authorized copying ServiceRadar's private BuildBuddy configuration into gitignored local files; operational credentials remain excluded from source and build inputs. Public workflow configuration is project-owned.
+
+Staging uses farm01, the stock CNPG image, Kustomize, and a manual ArgoCD application. Production configuration reserves carverauto; promotion is deferred. This phase implements and validates the foundation, not the entire playable alpha or a live cluster rollout. Prefer meaningful workflow integration/E2E tests; unit tests are reserved for hard invariants and regressions.
+
 ### Reference inventory and reuse boundaries
 
 Paths below are relative to that ServiceRadar checkout. Exact observed resolved versions come from its lockfiles; declaration ranges are not mistaken for installed versions.
@@ -18,16 +28,16 @@ Paths below are relative to that ServiceRadar checkout. Exact observed resolved 
 | Sparse sets | Root lockfile; `god_view_nif/src/core/arrow_serde.rs:serialize_bitmap` | Use **roaring 0.11.4**, portable `serialize_into`, and cross-language golden fixtures. Replace causal-state sets with entity, sector, dirty-component, and audience sets. |
 | Elixir/native boundary | Both Mix lockfiles; root Rust lockfile; `god_view_nif/src/lib.rs` | Use **rustler 0.38.0** in Elixir and Rust. Retain DirtyCpu scheduling and checked allocation. `vec_into_binary` copies from a Vec into OwnedBinary; do not describe it as allocation-free. |
 | Web shell | `elixir/web-ng/mix.lock`, `mix.exs` | Baseline **Phoenix 1.8.15**, **LiveView 1.2.12**, **Bandit 1.12.5**; pin compatible Phoenix JS assets to the server version. Use a separate game application and match-scoped authorization. |
-| Database client | `elixir/web-ng/mix.lock` | Baseline **ecto_sql 3.14.0** and **postgrex 0.22.4**. Use small Ecto contexts for game metadata; ServiceRadar's Ash resource and monitoring domain model are not imported. |
+| Database client | `elixir/web-ng/mix.lock` | Baseline **ecto_sql 3.14.0** and **postgrex 0.22.4**. Use project-owned Ash domains/resources through AshPostgres for metadata; do not import ServiceRadar monitoring domains. |
 | Cluster registry/supervision | `elixir/serviceradar_core/lib/serviceradar/registry/process_registry.ex`; both Mix lockfiles | Baseline **Horde 0.10.0** and **libcluster 3.5.0**. Retain explicit membership/placement settings and configurable CRDT sync bounds. ServiceRadar's 3-second sync interval is evidence of a tuning concern, not an RTS default. |
-| Discovery | `elixir/web-ng/config/runtime.exs` cluster section; core `cluster_supervisor.ex` | Adapt `Cluster.Strategy.Kubernetes` with `mode: :dns`, plus explicit EPMD development configuration; exclude its deployment identifiers and multi-tier monitoring layout. |
+| Discovery | `elixir/web-ng/config/runtime.exs` cluster section; core `cluster_supervisor.ex` | Use `Cluster.Strategy.Kubernetes.DNS` against the headless service, plus explicit EPMD development configuration; exclude monitoring-specific deployment identifiers. |
 | Browser column validation | `assets/js/lib/god_view/world_tile_decode.js`, `snapshot_columns.js` | Reuse the approach: validate encoded size, schema/version, types, row counts, bounds, and generation before allocating/publishing state; retain typed arrays and avoid per-unit JS objects. |
 | WASM lifecycle | `assets/wasm/god_view_exec/`; `assets/js/wasm/god_view_exec_runtime.js` | Retain explicit allocation/free discipline and streaming instantiation fallback. That inspected WASM crate has no Arrow dependencies; God View decodes Arrow with JS `apache-arrow` (declared `^16.1.0`) and uses WASM helpers. Build the proposed Rust Arrow/Roaring worker, with JS Arrow retained only as a diagnostic interop oracle. |
 | Stream generation and cancellation | `channels/topology_tile_channel.ex`, God View stream/cache code | Adapt generation fences, acknowledgement of actually retained state, supervised bounded work, and stale-task cancellation. Tile hints and HTTP snapshot fetching do not constitute the game's 10–20 Hz binary match channel. |
 | Native raw-binary transport | `channels/arrow_stream_handler.ex` | Reference its binary WebSock/NIF boundary, but keep the approved Phoenix Channel game transport and team-safe PubSub fanout. FieldSurvey ingestion and database writes are unrelated. |
 | Renderer | `assets/package.json`, `WorldMapRenderer.js` | Its Deck.gl/Luma.gl implementation informs buffer/camera/lifecycle pitfalls. Use the PRD's Three.js WebGPURenderer for the game's PBR/compute pipeline. |
 
-Implementation will adapt these patterns into project-owned code with attribution where source is copied and compatible license notices retained. Do not link this game's build to a sibling checkout or copy ServiceRadar's entire dependency graph, NATS pipeline, Ash domains, graph services, or operational credentials.
+Implementation will adapt these patterns into project-owned code with attribution where source is copied and compatible license notices retained. Do not link this game's build to a sibling checkout or copy ServiceRadar's entire dependency graph, NATS pipeline, Ash domains, graph services, or checked-in operational credentials.
 
 ### DeepCausality reference boundary
 
@@ -45,21 +55,21 @@ Choose a compatible published set of `deep_causality`, `deep_causality_core`, `d
 
 ### 1. One Phoenix application, one authority resource per match
 
-Use `Contour` and `ContourWeb` namespaces with a root Mix application, a Rust workspace, and browser assets:
+Use `Contour` and `ContourWeb` namespaces with a Mix application under `elixir/contour/`, a Rust workspace, and TypeScript browser assets:
 
 | Proposed location | Responsibility |
 | --- | --- |
-| `lib/contour/matches/` | Room lifecycle, admission, session coordination, ownership fencing |
-| `lib/contour/accounts/`, `lib/contour/decks/` | Identity and relational metadata through scoped Ecto contexts |
-| `lib/contour_web/live/`, `channels/` | Authenticated lobby/match shell and authorized command/replication transport |
+| `elixir/contour/lib/contour/matches/` | Room lifecycle, admission, session coordination, ownership fencing |
+| `elixir/contour/lib/contour/accounts/`, `elixir/contour/lib/contour/decks/` | Identity and relational metadata through scoped Ash domains/resources |
+| `elixir/contour/lib/contour_web/live/`, `channels/` | Authenticated lobby/match shell and authorized command/replication transport |
 | `native/simulation/` | Pure Rust simulation library, no Rustler dependency, usable by benchmarks |
 | `native/protocol/` | Shared schemas, envelope validation, portable bitmap codec, golden fixtures |
 | `native/authoritative_core/` | Thin Rustler resource boundary over simulation/protocol |
 | `native/client_core/` | Rust Arrow/Roaring WASM worker library and compact client slab |
 | `native/staff_intelligence/` | Pure Rust evidence models, explanations, what-if comparisons, and advisory doctrine |
-| `assets/js/battlefield/` | Worker bridge, Three.js GPU adapter, interaction, hook lifecycle |
-| `priv/maps/`, `priv/rules/` | Versioned synthetic map and rules inputs |
-| `bench/`, `deploy/` | Reproducible acceptance workloads, image and Kubernetes manifests |
+| `web/src/battlefield/` | Worker bridge, Three.js GPU adapter, interaction, hook lifecycle |
+| `elixir/contour/priv/maps/`, `priv/rules/` | Versioned synthetic map and rules inputs |
+| `bench/`, `k8s/` | Reproducible acceptance workloads, image and Kubernetes manifests |
 
 The match GenServer is justified by persistent mutable state, ordered commands, timers, and lifecycle transitions. It alone owns a Rustler resource containing structure-of-arrays state, entity allocator, graph/spatial index, rules, and per-audience history. Stateless map validation and codecs remain plain functions. Avoid mirroring 20,000 mutable unit structs in Elixir/ETS. Expose small safe diagnostic summaries rather than dumping the native resource.
 
@@ -161,7 +171,7 @@ Alternative: shared memory from day one or per-unit JS objects on every frame. T
 
 ### 8. Horde placement with explicit failure semantics and fencing
 
-Start local development with a normal DynamicSupervisor/Registry; cluster mode adapts ServiceRadar's Horde members and Kubernetes DNS strategy. All alpha pods use the same combined image and can host sessions. Placement respects per-pod match/entity capacity. Track membership churn and configurable CRDT sync interval/max-sync size, and test pod rollouts; do not copy a monitoring-specific sync interval without measurements.
+Start local development with a normal DynamicSupervisor/Registry; cluster mode adapts ServiceRadar's Horde patterns with libcluster DNS polling. Web and core pods use the same combined image, with only core pods hosting sessions. Placement respects per-pod match/entity capacity. Track membership churn and configurable CRDT sync interval/max-sync size, and test pod rollouts; do not copy a monitoring-specific sync interval without measurements.
 
 Horde is eventually consistent and restarts child processes without preserving their state. It provides discovery/placement, not a strong ownership lock or native state checkpoint. [Horde's documented consistency and restart semantics](https://horde.hexdocs.pm/Horde.DynamicSupervisor.html)
 
@@ -181,7 +191,7 @@ Use authenticated accounts and stable sessions, unranked create/join room matchi
 
 Persist accounts/session tokens, deck definitions/selections, matches, participants, owner epochs/leases, and unique results. Batch accepted commands and periodic tick digests into bounded diagnostic-history storage away from the hot loop; do not write 20,000 entity rows each tick. History is server-only until a separately authorized replay feature exists. Persistence retries must be idempotent and bounded; on sustained history failure, mark history incomplete with the missing sequence range and expose it to operators. Persist that completeness status with the result. Results remain durable before a match is reported finalized.
 
-Alternative: import ServiceRadar's complete Ash/monitoring schema or persist all runtime entity state. The game has small independent metadata domains and transient match-native state; Ecto/PostgreSQL suffices. An Ash-based metadata implementation can be reconsidered separately without changing battlefield contracts.
+Alternative: import ServiceRadar's complete Ash/monitoring schema or persist all runtime entity state. The game has small independent metadata domains and transient match-native state; AshPostgres stores project-owned metadata resources, and AshOban handles bounded background maintenance. This does not change battlefield contracts.
 
 ### 10. A staff advisor and contestable electronic intelligence
 
