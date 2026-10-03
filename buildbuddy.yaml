@@ -1,0 +1,21 @@
+# Adapted from ServiceRadar's BuildBuddy workflow/executor setup. No embedded credentials.
+actions:
+  - name: ContourFoundation
+    self_hosted: true
+    pool: workflows
+    container_image: docker://registry.carverauto.dev/serviceradar/buildbuddy-workflow-runner:v1.0.24.5@sha256:7f64c7cdf563c032ed7c5546eb9e4492cd527df64a615b55788fc518aa8752dd
+    platform_properties:
+      OSFamily: linux
+      Arch: amd64
+      dockerNetwork: bridge
+    resource_requests:
+      memory: 8GB
+      disk: 20GB
+    triggers:
+      push:
+        branches: [staging]
+      pull_request:
+        branches: [staging]
+    steps:
+      - run: bazel build --config=ci //:release //web:typecheck
+      - run: bazel test --config=ci //elixir/contour:integration //elixir/contour:cluster //scripts:release_smoke //third_party/hex:lock_consistency

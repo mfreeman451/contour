@@ -1,0 +1,23 @@
+# Reserved for carverauto. No production Application or promotion automation yet.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: contour-prod
+resources:
+  - ../../base
+patches:
+  - target:
+      kind: Namespace
+      name: contour
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: contour-prod
+configMapGenerator:
+  - name: contour-config
+    behavior: merge
+    literals:
+      - PHX_HOST=contour.carverauto.dev
+      - DATABASE_HOST=contour-db-rw.contour-prod.svc.cluster.local
+      - CLUSTER_DNS_NAME=contour-discovery.contour-prod.svc.cluster.local
+generatorOptions:
+  disableNameSuffixHash: true

@@ -1,0 +1,72 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: contour-selfsigned
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: contour-distribution-ca
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  isCA: true
+  commonName: contour-distribution-ca
+  secretName: contour-distribution-ca
+  duration: 87600h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: contour-selfsigned
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: contour-distribution
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  ca:
+    secretName: contour-distribution-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: contour-distribution
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  secretName: contour-distribution-tls
+  commonName: contour
+  dnsNames: [contour, contour-discovery]
+  duration: 2160h
+  renewBefore: 720h
+  usages: [server auth, client auth]
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: contour-distribution
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: contour-distribution-options
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+data:
+  ssl_dist.conf: |
+    [{server, [{certfile, "/etc/contour/distribution/tls.crt"},
+               {keyfile, "/etc/contour/distribution/tls.key"},
+               {cacertfile, "/etc/contour/distribution/ca.crt"},
+               {verify, verify_peer}, {fail_if_no_peer_cert, true}]},
+     {client, [{server_name_indication, "contour"},
+               {certfile, "/etc/contour/distribution/tls.crt"},
+               {keyfile, "/etc/contour/distribution/tls.key"},
+               {cacertfile, "/etc/contour/distribution/ca.crt"},
+               {verify, verify_peer}]}].

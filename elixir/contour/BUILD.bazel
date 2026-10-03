@@ -1,0 +1,42 @@
+load("@rules_elixir//:mix_app.bzl", "mix_app")
+load("@rules_elixir//:elixir_release.bzl", "elixir_release")
+load("@rules_elixir//:ex_unit_test.bzl", "ex_unit_test")
+package(default_visibility = ["//visibility:public"])
+exports_files(["mix.exs", "mix.lock"])
+
+filegroup(name = "templates", srcs = glob(["lib/contour_web/**/*.ex", "lib/contour_web/**/*.heex"]))
+filegroup(name = "sources", srcs = ["mix.exs", "mix.lock"] + glob(["config/**", "lib/**", "priv/**", "rel/**"], exclude = ["priv/static/assets/**", "priv/static/cache_manifest.json"]))
+
+RUNTIME_DEPS = ["@hexpm//:" + app for app in [
+    "ash", "ash_postgres", "ash_phoenix", "ash_oban", "simple_sat", "oban",
+    "phoenix", "phoenix_ecto", "phoenix_html", "phoenix_live_view", "bandit",
+    "ecto_sql", "postgrex", "guardian", "oidcc", "remote_ip", "horde", "libcluster",
+    "jason", "telemetry_metrics", "telemetry_poller", "rustler",
+]] + ["@rules_elixir//elixir"]
+
+mix_app(name = "app", app_name = "contour", srcs = [":sources"], mix_env = "prod", deps = RUNTIME_DEPS)
+mix_app(name = "test_app", app_name = "contour", srcs = [":sources"] + glob(["test/support/**"]), mix_env = "test", deps = RUNTIME_DEPS + ["@hexpm//:lazy_html"])
+elixir_release(
+    name = "release", app = ":app", release_name = "contour",
+    srcs = ["mix.exs", "mix.lock"] + glob(["config/**", "rel/**"]),
+    overlays = {"//web:static": "priv"}, out = "contour-release.tar.gz",
+)
+ex_unit_test(
+    name = "integration", size = "medium", timeout = "long",
+    srcs = ["test/bazel_bootstrap.exs", "test/test_helper.exs"] + glob(["test/integration/**/*_test.exs"]),
+    data = glob(["config/**", "priv/repo/migrations/**"]) + ["//build:postgres", "//scripts:rbe-postgres.sh"],
+    deps = [":test_app"],
+    env = {"MIX_ENV": "test"},
+    setup = 'source "$PWD/../../scripts/rbe-postgres.sh"',
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+ex_unit_test(
+    name = "cluster", size = "medium", timeout = "long",
+    srcs = ["test/cluster_smoke.exs"],
+    data = ["//scripts:cluster-tls.sh"],
+    deps = [":test_app"],
+    env = {"MIX_ENV": "test"},
+    setup = 'source "$PWD/../../scripts/cluster-tls.sh"',
+    target_compatible_with = ["@platforms//os:linux"],
+)

@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: contour-config
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+data:
+  PHX_SERVER: "true"
+  PORT: "4000"
+  HEALTH_PORT: "4001"
+  CLUSTER_ENABLED: "true"
+  DISTRIBUTION_TLS: "true"
+  CLUSTER_DNS_NAME: contour-discovery
+  CLUSTER_MEMBERSHIP_INTERVAL_MS: "2000"
+  HORDE_SYNC_INTERVAL_MS: "200"
+  HORDE_MAX_SYNC_SIZE: "200"
+  DATABASE_HOST: contour-db-rw
+  DATABASE_NAME: contour
+  DATABASE_CA_FILE: /etc/contour/db-ca/ca.crt
+  POOL_SIZE: "10"
+  TRUSTED_PROXY_CIDRS: "10.42.0.0/16"

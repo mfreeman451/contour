@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: contour-discovery
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: contour
+  ports:
+    - name: epmd
+      port: 4369
+    - name: distribution
+      port: 9100
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: contour-web
+spec:
+  selector:
+    app.kubernetes.io/name: contour
+    app.kubernetes.io/component: web
+  ports:
+    - name: http
+      port: 4000
+      targetPort: http

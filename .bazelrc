@@ -1,0 +1,27 @@
+common --enable_bzlmod
+common --noenable_platform_specific_config
+try-import %workspace%/.bazelrc.remote
+try-import %workspace%/.bazelrc.local
+build --incompatible_strict_action_env
+test --test_output=errors
+test --flaky_test_attempts=1
+
+# Shared BuildBuddy cache, build events, and remote execution for CONTOUR.
+build:cache_only --remote_cache=grpcs://cache-proxy.carverauto.dev:443
+build:cache_only --remote_bytestream_uri_prefix=carverauto.buildbuddy.io
+build:cache_only --bes_backend=grpcs://carverauto.buildbuddy.io
+build:cache_only --bes_results_url=https://carverauto.buildbuddy.io/invocation/
+build:cache_only --remote_cache_compression
+build:rbe --config=cache_only
+build:rbe --remote_executor=grpcs://carverauto.buildbuddy.io
+build:rbe --host_platform=//build/rbe:platform
+build:rbe --platforms=//build/rbe:platform
+build:rbe --extra_execution_platforms=//build/rbe:platform
+build:rbe --remote_download_minimal
+build:rbe --remote_timeout=15m
+build:rbe --jobs=100
+build:rbe --compilation_mode=opt
+build:rbe --cpu=k8
+build:ci --config=rbe
+build:ci --build_metadata=REPO_URL=https://github.com/mfreeman451/rts-game
+build:ci --build_metadata=ROLE=CI

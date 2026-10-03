@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+tag=${1:?Usage: scripts/image registry.carverauto.dev/contour/contour:staging-COMMIT}
+engine=${CONTAINER_ENGINE:-container}
+bazel build --config=rbe --remote_download_outputs=toplevel //elixir/contour:release
+mkdir -p .local/image
+cp bazel-bin/elixir/contour/contour-release.tar.gz .local/image/
+case "$engine" in
+  container) container build --arch amd64 --file "$PWD/Dockerfile" --tag "$tag" .local/image ;;
+  docker) docker build --platform linux/amd64 --file "$PWD/Dockerfile" --tag "$tag" .local/image ;;
+  *) echo 'CONTAINER_ENGINE must be container or docker' >&2; exit 1 ;;
+esac

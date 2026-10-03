@@ -1,0 +1,33 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: contour-staging
+resources:
+  - ../../base
+  - route.yaml
+patches:
+  - target:
+      kind: Namespace
+      name: contour
+    patch: |-
+      - op: replace
+        path: /metadata/name
+        value: contour-staging
+  - target:
+      kind: Cluster
+      name: contour-db
+    patch: |-
+      - op: add
+        path: /spec/storage/storageClass
+        value: local-path
+configMapGenerator:
+  - name: contour-config
+    behavior: merge
+    literals:
+      - PHX_HOST=contour.k8s-farm.carverauto.dev
+      - DATABASE_HOST=contour-db-rw.contour-staging.svc.cluster.local
+      - CLUSTER_DNS_NAME=contour-discovery.contour-staging.svc.cluster.local
+generatorOptions:
+  disableNameSuffixHash: true
+images:
+  - name: registry.carverauto.dev/contour/contour
+    newTag: build-required

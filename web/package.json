@@ -1,0 +1,20 @@
+{
+  "name": "contour-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "phoenix": "1.8.15",
+    "phoenix_html": "4.3.0",
+    "phoenix_live_view": "1.2.12"
+  },
+  "devDependencies": {
+    "@types/phoenix": "1.6.7",
+    "@types/phoenix_live_view": "1.0.0",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
+  }
+}

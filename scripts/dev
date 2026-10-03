@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+if [ ! -f .local/postgres.env ]; then
+  echo 'Start the database with scripts/db up first.' >&2
+  exit 1
+fi
+set -a
+source .local/postgres.env
+if [ -f .env ]; then source .env; fi
+set +a
+export DATABASE_USER=${DATABASE_USER:-$POSTGRES_USER}
+export DATABASE_PASSWORD=${DATABASE_PASSWORD:-$POSTGRES_PASSWORD}
+export DATABASE_HOST=${DATABASE_HOST:-127.0.0.1}
+export DATABASE_PORT=${DATABASE_PORT:-55432}
+if [ "$#" = 0 ]; then set -- phx.server; fi
+cd elixir/contour
+exec mix "$@"

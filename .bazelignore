@@ -1,0 +1,11 @@
+.agents
+.claude
+.dsh
+.gemini
+.grok
+.lavish
+.pi
+.local
+elixir/contour/deps
+elixir/contour/_build
+web/node_modules

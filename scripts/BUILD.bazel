@@ -1,0 +1,8 @@
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+exports_files(["rbe-postgres.sh", "cluster-tls.sh"])
+
+sh_test(
+    name = "release_smoke", srcs = ["release-smoke.sh"],
+    data = ["//elixir/contour:release"], size = "small", timeout = "short",
+    target_compatible_with = ["@platforms//os:linux"],
+)
